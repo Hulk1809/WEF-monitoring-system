@@ -164,7 +164,7 @@ namespace MonitorModule
             // ==================== HỆ THỐNG XÁC THỰC MFA AUTHENTICATOR (TOTP) ====================
 
             // API Đăng nhập MFA Authenticator (TOTP)
-            app.MapPost("/api/auth/login", async (HttpContext context) =>
+            app.MapPost("/api/auth/login", (LoginDto req, HttpContext context) =>
             {
                 var clientIp = context.Request.Headers["X-Forwarded-For"].FirstOrDefault() 
                                ?? context.Request.Headers["X-Real-IP"].FirstOrDefault() 
@@ -189,11 +189,8 @@ namespace MonitorModule
 
                 try
                 {
-                    using var reader = new StreamReader(context.Request.Body);
-                    var body = await reader.ReadToEndAsync();
-                    var doc = JsonDocument.Parse(body);
-                    var email = doc.RootElement.GetProperty("email").GetString();
-                    var code = doc.RootElement.GetProperty("code").GetString();
+                    var email = req?.Email?.Trim() ?? "";
+                    var code = req?.Code?.Trim() ?? "";
 
                     if (email != "voquocthang18092005@gmail.com")
                     {
@@ -1543,6 +1540,12 @@ namespace MonitorModule
         public string Ip { get; set; } = string.Empty;
         public string Country { get; set; } = string.Empty;
         public DateTime FirstSeen { get; set; }
+    }
+
+    public class LoginDto
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
     }
 
     public class ContainerMetrics
