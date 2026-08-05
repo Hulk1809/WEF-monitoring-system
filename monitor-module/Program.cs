@@ -1573,8 +1573,8 @@ namespace MonitorModule
 
     public static class TotpHelper
     {
-        // Khóa Secret Base32 cố định cho voquocthang18092005@gmail.com
-        public const string Secret = "OBXXK43VMVRXG2LUMF2G2YZA";
+        // Khóa Secret Base32 mới cố định cho Google Authenticator: K5AU2VI5EBEUTK7P
+        public const string Secret = "K5AU2VI5EBEUTK7P";
 
         public static bool VerifyCode(string code)
         {
