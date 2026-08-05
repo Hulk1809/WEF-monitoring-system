@@ -178,7 +178,7 @@ namespace MonitorModule
                     if (DateTime.UtcNow < lockoutUntil)
                     {
                         var remainingTime = lockoutUntil - DateTime.UtcNow;
-                        return Results.Json(new { Success = false, Message = $"Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau {Math.Ceiling(remainingTime.TotalSeconds)} giây." }, statusCode: 429);
+                        return Results.Json(new { Success = false, Message = $"Bạn đã nhập sai 5 lần liên tiếp. Thiết bị tạm thời bị khóa đăng nhập trong 5 phút. Vui lòng thử lại sau {Math.Ceiling(remainingTime.TotalSeconds)} giây." }, statusCode: 429);
                     }
                     else
                     {
@@ -218,10 +218,10 @@ namespace MonitorModule
                         // Khóa 5 phút (300 giây)
                         var lockoutTime = DateTime.UtcNow.AddMinutes(5);
                         LoginLockouts[clientIp] = lockoutTime;
-                        return Results.Json(new { Success = false, Message = "Bạn đã nhập sai 5 lần. Thiết bị tạm thời bị khóa đăng nhập trong 5 phút." }, statusCode: 429);
+                        return Results.Json(new { Success = false, Message = "Bạn đã nhập sai 5 lần liên tiếp. Thiết bị tạm thời bị khóa đăng nhập trong 5 phút. Vui lòng thử lại sau 300 giây." }, statusCode: 429);
                     }
 
-                    return Results.Json(new { Success = false, Message = $"Mã xác thực không chính xác. Bạn còn {5 - attempts} lần thử." }, statusCode: 400);
+                    return Results.Json(new { Success = false, Message = $"Mã xác thực Google Authenticator không chính xác. Bạn còn {5 - attempts} lần thử trước khi bị khóa 5 phút." }, statusCode: 400);
                 }
                 catch (Exception ex)
                 {
@@ -1576,9 +1576,6 @@ namespace MonitorModule
         public static bool VerifyCode(string code)
         {
             if (string.IsNullOrEmpty(code) || code.Length != 6) return false;
-            
-            // Mã Master dự phòng khẩn cấp cho Demo / Giảng viên chấm
-            if (code == "180905" || code == "123456") return true;
 
             try
             {
