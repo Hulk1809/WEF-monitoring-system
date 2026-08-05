@@ -31,15 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Kiểm tra Token hợp lệ trong localStorage
-    const token = localStorage.getItem('mfa_token');
-    if (!token || token === 'undefined' || token === 'null' || token.trim() === '') {
-        localStorage.removeItem('mfa_token');
-        showLoginOverlay(true);
-    } else {
-        showLoginOverlay(false);
-        startDashboardUpdates();
-    }
+    // Tạm thời tắt màn hình khóa để vào thẳng Dashboard theo yêu cầu
+    showLoginOverlay(false);
+    startDashboardUpdates();
 });
 
 function startDashboardUpdates() {
