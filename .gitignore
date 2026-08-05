@@ -7,6 +7,8 @@
 bin/
 obj/
 out/
+~$*
+*.tmp
 *.user
 *.userosscache
 *.sln.docstates
