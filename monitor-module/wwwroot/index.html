@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Security Shield - Monitor Dashboard</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Màn hình đăng nhập MFA Lock Screen -->
+    <div id="login-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0a0a0f; z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(20px);">
+        <div class="card" style="width: 400px; padding: 30px; border: 1px solid rgba(255,255,255,0.1); background: rgba(20,20,35,0.85); box-shadow: 0 8px 32px 0 rgba(0,0,0,0.5);">
+            <div style="text-align: center; margin-bottom: 25px;">
+                <i class="fa-solid fa-lock" style="font-size: 40px; color: var(--primary); margin-bottom: 15px; text-shadow: 0 0 15px rgba(124,58,237,0.5);"></i>
+                <h2 style="font-family: 'Outfit', sans-serif; font-weight: 700; color: #fff; margin-bottom: 5px;">MÀN HÌNH KHÓA AN NINH</h2>
+                <p style="font-size: 13px; color: rgba(255,255,255,0.6);">Vui lòng nhập Email và mã Authenticator để truy cập</p>
+            </div>
+            
+            <div id="login-error" style="display: none; background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #ef4444; padding: 10px; border-radius: 8px; font-size: 12px; margin-bottom: 15px; text-align: center;">
+                Mã xác thực không hợp lệ.
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 6px; font-weight: 600;">EMAIL QUẢN TRỊ VIÊN</label>
+                <input type="email" id="login-email" value="voquocthang18092005@gmail.com" readonly style="width: 100%; padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: rgba(255,255,255,0.8); font-size: 13px; outline: none;" />
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 6px; font-weight: 600;">MÃ AUTHENTICATOR (6 SỐ)</label>
+                <input type="text" id="login-code" placeholder="Nhập 6 số..." maxlength="6" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 16px; letter-spacing: 4px; text-align: center; outline: none; font-weight: 700;" />
+            </div>
+
+            <button onclick="handleLogin()" style="width: 100%; padding: 12px; background: var(--primary); border: none; border-radius: 8px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-key"></i> Xác thực & Đăng nhập</button>
+
+
+        </div>
+    </div>
+    <div class="glow-bg"></div>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <i class="fa-solid fa-shield-halved logo-icon"></i>
+                <div class="logo-text">
+                    <h1>Docker Security Shield</h1>
+                    <span>Hệ thống giám sát tự động & Phòng thủ an ninh</span>
+                </div>
+            </div>
+            <div class="security-badge" id="security-badge">
+                <i class="fa-solid fa-circle-check"></i>
+                <span id="security-status-text">AN TOÀN</span>
+            </div>
+        </header>
+
+        <!-- Trạng thái cảnh báo chi tiết -->
+        <div class="alert-banner" id="alert-banner" style="display: none;">
+            <div class="alert-content">
+                <i class="fa-solid fa-triangle-exclamation alert-icon"></i>
+                <div class="alert-text">
+                    <h3>Cảnh báo Tấn công & Tự động Phòng vệ</h3>
+                    <p id="alert-description">Phát hiện hành vi rà quét nguy hiểm. Hệ thống đã cô lập ứng dụng.</p>
+                </div>
+            </div>
+            <button class="btn-clear-alert" id="btn-clear-alert" onclick="clearThreats()">Xác nhận & Khôi phục</button>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Cột trái: Danh sách Container và Chart -->
+            <div class="left-panel">
+                <h2 class="panel-title"><i class="fa-solid fa-cubes"></i> Trạng thái Container</h2>
+                <div class="container-cards" id="container-cards">
+                    <!-- Card App -->
+                    <div class="card" id="card-secure-app">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <i class="fa-solid fa-gears app-icon"></i>
+                                <div>
+                                    <h3>secure-app</h3>
+                                    <span class="badge" id="status-secure-app">Đang chạy</span>
+                                </div>
+                            </div>
+                            <div class="control-buttons">
+                                <button class="btn btn-start" onclick="controlContainer('secure-app', 'start')" title="Start"><i class="fa-solid fa-play"></i></button>
+                                <button class="btn btn-stop" onclick="controlContainer('secure-app', 'stop')" title="Stop"><i class="fa-solid fa-square"></i></button>
+                                <button class="btn btn-restart" onclick="controlContainer('secure-app', 'restart')" title="Restart"><i class="fa-solid fa-rotate-right"></i></button>
+                            </div>
+                        </div>
+                        <div class="metrics">
+                            <div class="metric-item">
+                                <span class="metric-label">CPU Usage</span>
+                                <span class="metric-value" id="cpu-secure-app">0.00%</span>
+                                <div class="progress-bar"><div class="progress" id="cpu-bar-secure-app" style="width: 0%"></div></div>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Memory Usage</span>
+                                <span class="metric-value" id="mem-secure-app">0MB / 0MB</span>
+                                <div class="progress-bar"><div class="progress" id="mem-bar-secure-app" style="width: 0%"></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card DB -->
+                    <div class="card" id="card-postgres-db">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <i class="fa-solid fa-database db-icon"></i>
+                                <div>
+                                    <h3>postgres-db</h3>
+                                    <span class="badge" id="status-postgres-db">Đang chạy</span>
+                                </div>
+                            </div>
+                            <div class="control-buttons">
+                                <button class="btn btn-start" onclick="controlContainer('postgres-db', 'start')" title="Start"><i class="fa-solid fa-play"></i></button>
+                                <button class="btn btn-stop" onclick="controlContainer('postgres-db', 'stop')" title="Stop"><i class="fa-solid fa-square"></i></button>
+                                <button class="btn btn-restart" onclick="controlContainer('postgres-db', 'restart')" title="Restart"><i class="fa-solid fa-rotate-right"></i></button>
+                            </div>
+                        </div>
+                        <div class="metrics">
+                            <div class="metric-item">
+                                <span class="metric-label">CPU Usage</span>
+                                <span class="metric-value" id="cpu-postgres-db">0.00%</span>
+                                <div class="progress-bar"><div class="progress" id="cpu-bar-postgres-db" style="width: 0%"></div></div>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Memory Usage</span>
+                                <span class="metric-value" id="mem-postgres-db">0MB / 0MB</span>
+                                <div class="progress-bar"><div class="progress" id="mem-bar-postgres-db" style="width: 0%"></div></div>
+                            </div>
+                        </div>
+                        <div class="db-shield-text">
+                            <i class="fa-solid fa-lock"></i> Cơ sở dữ liệu được cách ly hoàn toàn khỏi Internet
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Resource Chart -->
+                <div class="chart-container card">
+                    <h3 class="panel-title"><i class="fa-solid fa-chart-line"></i> Biểu đồ Tài nguyên Thời gian thực</h3>
+                    <canvas id="resourceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Cột phải: Live Logs & Blacklist -->
+            <div class="right-panel">
+                <div class="logs-panel card">
+                    <div class="logs-header">
+                        <h2 class="panel-title"><i class="fa-solid fa-terminal"></i> Nhật ký Giám sát Hệ thống</h2>
+                        <div class="log-filters">
+                            <select id="log-filter-select" onchange="filterLogs()">
+                                <option value="ALL">Tất cả Logs</option>
+                                <option value="ACCESS">Truy cập thông thường</option>
+                                <option value="SUSPICIOUS">Rà quét đáng ngờ</option>
+                                <option value="CRITICAL">Phòng thủ tự động</option>
+                                <option value="SYSTEM">Hệ thống Monitor</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="log-terminal" id="log-terminal">
+                        <!-- Log lines will be appended here -->
+                    </div>
+                </div>
+
+                <!-- Danh sách IP bị chặn -->
+                <div class="blacklist-panel card">
+                    <h3 class="panel-title"><i class="fa-solid fa-user-slash"></i> Danh sách IP bị Cách ly (Threat IPs)</h3>
+                    <div class="blacklist-table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Địa chỉ IP</th>
+                                    <th>Thời điểm phát hiện</th>
+                                    <th>Hành động phòng vệ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="blacklist-tbody">
+                                <tr>
+                                    <td colspan="3" class="empty-table">Chưa phát hiện IP tấn công rà quét</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Danh sách IP tin cậy (Whitelist) -->
+                <div class="whitelist-panel card" style="margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 class="panel-title" style="margin-bottom: 0;"><i class="fa-solid fa-user-shield"></i> IP Tin cậy (Whitelist)</h3>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="whitelist-input" placeholder="Nhập IP..." style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 12px; outline: none; width: 140px;">
+                            <button onclick="addWhitelistIp()" style="background: var(--primary); color: #fff; border: none; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-plus"></i> Thêm</button>
+                        </div>
+                    </div>
+                    <div class="blacklist-table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Địa chỉ IP</th>
+                                    <th>Thời điểm thêm</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="whitelist-tbody">
+                                <tr>
+                                    <td colspan="3" class="empty-table">Chưa có IP nào trong danh sách tin cậy</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phần Thống kê An ninh -->
+        <div class="stats-section" style="margin-top: 25px;">
+            <h2 class="panel-title" style="margin-bottom: 15px; font-size: 20px;"><i class="fa-solid fa-chart-pie"></i> Thống kê An ninh Hệ thống</h2>
+            <div class="stats-grid">
+                <!-- Biểu đồ tròn: Tỷ lệ loại tấn công -->
+                <div class="card attack-card" style="height: 320px; display: flex; flex-direction: column;">
+                    <h3 class="panel-title" style="font-size: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;"><i class="fa-solid fa-circle-nodes" style="color: var(--primary);"></i> Tỷ lệ Loại tấn công</h3>
+                    <div style="flex: 1; position: relative; margin-top: 10px; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="attackPieChart" style="max-height: 220px; max-width: 220px;"></canvas>
+                    </div>
+                </div>
+
+                <!-- Biểu đồ cột: Số lượng tấn công theo ngày/tuần -->
+                <div class="card attack-card" style="height: 320px; display: flex; flex-direction: column;">
+                    <h3 class="panel-title" style="font-size: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;"><i class="fa-solid fa-chart-bar" style="color: var(--info);"></i> Lịch sử Tấn công (7 ngày)</h3>
+                    <div style="flex: 1; position: relative; margin-top: 10px;">
+                        <canvas id="attackBarChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Danh sách/Bản đồ quốc gia tấn công -->
+                <div class="card attack-card" style="height: 320px; display: flex; flex-direction: column; overflow: hidden;">
+                    <h3 class="panel-title" style="font-size: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;"><i class="fa-solid fa-globe" style="color: var(--success);"></i> Nguồn Tấn công (Quốc gia)</h3>
+                    <div class="blacklist-table-container" style="flex: 1; overflow-y: auto; margin-top: 10px;">
+                        <table style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="text-align: left; padding: 6px;">Quốc gia / Khu vực</th>
+                                    <th style="text-align: right; padding: 6px 12px;">Số IP bị chặn</th>
+                                </tr>
+                            </thead>
+                            <tbody id="country-tbody">
+                                <tr>
+                                    <td colspan="2" class="empty-table" style="padding: 30px 0;">Chưa ghi nhận dữ liệu quốc gia</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script src="app.js"></script>
+</body>
+</html>

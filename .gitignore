@@ -1,0 +1,24 @@
+# Sensitive Security Credentials
+.env
+*.pem
+*.key
+
+# Build and Temp Artifacts
+bin/
+obj/
+out/
+*.user
+*.userosscache
+*.sln.docstates
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Local Data / Logs / Model Caches
+*.log
+data/
+postgres_data/
+monitor_data/
+waf_model.zip
+waf_deep_model.onnx
