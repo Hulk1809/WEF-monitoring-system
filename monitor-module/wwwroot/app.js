@@ -31,15 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Kiểm tra Token hợp lệ trong localStorage
-    const token = localStorage.getItem('mfa_token');
-    if (!token || token === 'undefined' || token === 'null' || token.trim() === '') {
-        localStorage.removeItem('mfa_token');
-        showLoginOverlay(true);
-    } else {
-        showLoginOverlay(false);
-        startDashboardUpdates();
-    }
+    // Luôn xóa Token cũ khi mở lại trang để bắt buộc nhập lại mã Authenticator mỗi phiên làm việc mới
+    sessionStorage.removeItem('mfa_token');
+    localStorage.removeItem('mfa_token');
+    showLoginOverlay(true);
 });
 
 function startDashboardUpdates() {
@@ -57,7 +52,7 @@ function stopDashboardUpdates() {
 
 // Wrapper cho fetch có tích hợp Token JWT và tự động bắt lỗi 401
 async function fetchWithAuth(url, options = {}) {
-    const token = localStorage.getItem('mfa_token');
+    const token = sessionStorage.getItem('mfa_token');
     options.headers = {
         ...options.headers,
         'Authorization': `Bearer ${token || ''}`
@@ -66,6 +61,7 @@ async function fetchWithAuth(url, options = {}) {
     try {
         const response = await fetch(url, options);
         if (response.status === 401) {
+            sessionStorage.removeItem('mfa_token');
             localStorage.removeItem('mfa_token');
             stopDashboardUpdates();
             showLoginOverlay(true);
@@ -115,7 +111,7 @@ async function handleLogin() {
         
         const data = await response.json();
         if (response.status === 200 && data.token) {
-            localStorage.setItem('mfa_token', data.token);
+            sessionStorage.setItem('mfa_token', data.token);
             showLoginOverlay(false);
             errorDiv.style.display = 'none';
             if (codeInput) codeInput.value = '';
