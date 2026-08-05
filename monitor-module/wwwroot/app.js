@@ -31,10 +31,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Luôn xóa Token cũ khi mở lại trang để bắt buộc nhập lại mã Authenticator mỗi phiên làm việc mới
-    sessionStorage.removeItem('mfa_token');
-    localStorage.removeItem('mfa_token');
-    showLoginOverlay(true);
+    // Kiểm tra Token trong sessionStorage (giữ đăng nhập khi nhấn F5, bắt buộc đăng nhập lại khi mở phiên/tab mới)
+    const token = sessionStorage.getItem('mfa_token');
+    if (!token || token === 'undefined' || token === 'null' || token.trim() === '') {
+        sessionStorage.removeItem('mfa_token');
+        showLoginOverlay(true);
+    } else {
+        showLoginOverlay(false);
+        startDashboardUpdates();
+    }
 });
 
 function startDashboardUpdates() {
