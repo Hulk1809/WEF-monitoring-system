@@ -44,8 +44,27 @@ namespace MonitorModule
 
         public static bool IsAuthorized(HttpContext context)
         {
-            // Tạm thời mở quyền truy cập trực tiếp (Bypass Auth) cho Admin theo yêu cầu
-            return true;
+            var authHeader = context.Request.Headers["Authorization"].ToString();
+            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var token = authHeader.Substring(7).Trim();
+            if (ActiveSessions.TryGetValue(token, out var expiry))
+            {
+                if (DateTime.UtcNow < expiry)
+                {
+                    // Gia hạn phiên làm việc thêm 2 tiếng
+                    ActiveSessions[token] = DateTime.UtcNow.AddHours(2);
+                    return true;
+                }
+                else
+                {
+                    ActiveSessions.TryRemove(token, out _);
+                }
+            }
+            return false;
         }
         
         // Khóa đồng bộ hóa ghi cơ sở dữ liệu SQLite
