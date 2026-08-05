@@ -13,21 +13,47 @@ const dbMemData = Array(maxDataPoints).fill(0);
 // Danh sách log đã tải để filter
 let allLogs = [];
 
+let dashboardTimer = null;
+
 // Khởi chạy khi DOM load xong
 document.addEventListener('DOMContentLoaded', () => {
     initChart();
     initAttackCharts();
     
-    // Kiểm tra và hiển thị Login Overlay
+    // Đăng ký sự kiện nhấn phím Enter trên ô nhập mã OTP
+    const codeInput = document.getElementById('login-code');
+    if (codeInput) {
+        codeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleLogin();
+            }
+        });
+    }
+
+    // Kiểm tra Token hợp lệ trong localStorage
     const token = localStorage.getItem('mfa_token');
-    if (!token) {
+    if (!token || token === 'undefined' || token === 'null' || token.trim() === '') {
+        localStorage.removeItem('mfa_token');
         showLoginOverlay(true);
     } else {
         showLoginOverlay(false);
-        updateDashboard();
-        setInterval(updateDashboard, 2000);
+        startDashboardUpdates();
     }
 });
+
+function startDashboardUpdates() {
+    if (dashboardTimer) clearInterval(dashboardTimer);
+    updateDashboard();
+    dashboardTimer = setInterval(updateDashboard, 2000);
+}
+
+function stopDashboardUpdates() {
+    if (dashboardTimer) {
+        clearInterval(dashboardTimer);
+        dashboardTimer = null;
+    }
+}
 
 // Wrapper cho fetch có tích hợp Token JWT và tự động bắt lỗi 401
 async function fetchWithAuth(url, options = {}) {
@@ -37,13 +63,20 @@ async function fetchWithAuth(url, options = {}) {
         'Authorization': `Bearer ${token || ''}`
     };
     
-    const response = await fetch(url, options);
-    if (response.status === 401) {
-        localStorage.removeItem('mfa_token');
-        showLoginOverlay(true);
-        throw new Error("Unauthorized");
+    try {
+        const response = await fetch(url, options);
+        if (response.status === 401) {
+            localStorage.removeItem('mfa_token');
+            stopDashboardUpdates();
+            showLoginOverlay(true);
+            throw new Error("Unauthorized");
+        }
+        return response;
+    } catch (err) {
+        if (err.message === "Unauthorized") throw err;
+        console.warn("Fetch error:", err);
+        throw err;
     }
-    return response;
 }
 
 function showLoginOverlay(show) {
@@ -54,21 +87,30 @@ function showLoginOverlay(show) {
 }
 
 async function handleLogin() {
-    const email = document.getElementById('login-email').value;
-    const code = document.getElementById('login-code').value;
+    const emailInput = document.getElementById('login-email');
+    const codeInput = document.getElementById('login-code');
     const errorDiv = document.getElementById('login-error');
+    const loginBtn = document.querySelector('#login-overlay button');
+
+    const email = emailInput ? emailInput.value.trim() : '';
+    const code = codeInput ? codeInput.value.trim() : '';
 
     if (!code || code.length !== 6) {
-        errorDiv.textContent = 'Mã xác thực phải gồm 6 chữ số.';
+        errorDiv.textContent = 'Mã xác thực phải gồm đúng 6 chữ số.';
         errorDiv.style.display = 'block';
         return;
+    }
+
+    if (loginBtn) {
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xác thực...';
     }
 
     try {
         const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, code })
+            body: JSON.stringify({ email: email, code: code })
         });
         
         const data = await response.json();
@@ -76,18 +118,22 @@ async function handleLogin() {
             localStorage.setItem('mfa_token', data.token);
             showLoginOverlay(false);
             errorDiv.style.display = 'none';
-            document.getElementById('login-code').value = '';
+            if (codeInput) codeInput.value = '';
             
             // Khởi chạy vòng lặp cập nhật
-            updateDashboard();
-            setInterval(updateDashboard, 2000);
+            startDashboardUpdates();
         } else {
             errorDiv.textContent = data.message || 'Mã xác thực không chính xác hoặc đã hết hạn.';
             errorDiv.style.display = 'block';
         }
     } catch (e) {
-        errorDiv.textContent = 'Lỗi kết nối tới máy chủ.';
+        errorDiv.textContent = 'Lỗi kết nối tới máy chủ API.';
         errorDiv.style.display = 'block';
+    } finally {
+        if (loginBtn) {
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = '<i class="fa-solid fa-key"></i> Xác thực & Đăng nhập';
+        }
     }
 }
 
