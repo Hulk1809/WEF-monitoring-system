@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function startDashboardUpdates() {
     if (dashboardTimer) clearInterval(dashboardTimer);
     updateDashboard();
-    dashboardTimer = setInterval(updateDashboard, 2000);
+    dashboardTimer = setInterval(updateDashboard, 1000);
 }
 
 function stopDashboardUpdates() {

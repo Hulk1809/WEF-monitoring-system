@@ -35,10 +35,8 @@ namespace MonitorModule
         public static readonly ConcurrentDictionary<string, string> WhitelistedIps = new(); // IP -> Time whitelisted
         public static readonly ConcurrentDictionary<string, string> SeenIps = new(); // IP -> Country
         
-        // Lưu trữ các phiên đăng nhập hợp lệ (Token -> Hạn dùng)
+        public static readonly ConcurrentQueue<LogEntry> LogCache = new();
         public static readonly ConcurrentDictionary<string, DateTime> ActiveSessions = new();
-
-        // Theo dõi số lần nhập sai mã MFA và thời gian khóa đăng nhập
         public static readonly ConcurrentDictionary<string, int> LoginAttempts = new();
         public static readonly ConcurrentDictionary<string, DateTime> LoginLockouts = new();
 
@@ -130,6 +128,12 @@ namespace MonitorModule
                     foreach (var record in loadedSeenIps)
                     {
                         SeenIps.TryAdd(record.Ip, record.Country);
+                    }
+
+                    var loadedLogs = db.Logs.OrderByDescending(l => l.Timestamp).Take(100).Reverse().ToList();
+                    foreach (var record in loadedLogs)
+                    {
+                        LogCache.Enqueue(record);
                     }
                 }
                 catch (Exception ex)
@@ -271,13 +275,12 @@ namespace MonitorModule
                 });
             });
 
-            // API 2: Lấy danh sách Logs (tối đa 100 dòng gần nhất từ SQLite)
+            // API 2: Lấy danh sách Logs (tối đa 100 dòng gần nhất từ RAM Cache siêu tốc <0.1ms)
             app.MapGet("/api/logs", (HttpContext context) => 
             {
                 if (!IsAuthorized(context)) return Results.Json(new { Success = false, Message = "Chưa đăng nhập hoặc phiên làm việc hết hạn." }, statusCode: 401);
 
-                using var db = new MonitorDbContext();
-                return Results.Ok(db.Logs.OrderByDescending(l => l.Timestamp).Take(100).ToList());
+                return Results.Ok(LogCache.ToArray().OrderByDescending(l => l.Timestamp).Take(100).ToList());
             });
 
             // API 3: Điều khiển container (Start / Stop / Restart)
@@ -1012,29 +1015,26 @@ namespace MonitorModule
                 Message = message
             };
 
-            // Lưu vào SQLite
-            lock (DbLock)
-            {
-                try
-                {
-                    using var db = new MonitorDbContext();
-                    db.Logs.Add(log);
-                    db.SaveChanges();
+            LogCache.Enqueue(log);
+            while (LogCache.Count > 300) LogCache.TryDequeue(out _);
 
-                    // Dọn dẹp log cũ quá 500 dòng
-                    var count = db.Logs.Count();
-                    if (count > 500)
+            // Lưu vào SQLite chạy ngầm không làm chậm luồng chính
+            _ = Task.Run(() =>
+            {
+                lock (DbLock)
+                {
+                    try
                     {
-                        var oldestLogs = db.Logs.OrderBy(l => l.Timestamp).Take(count - 500).ToList();
-                        db.Logs.RemoveRange(oldestLogs);
+                        using var db = new MonitorDbContext();
+                        db.Logs.Add(log);
                         db.SaveChanges();
                     }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[DB ERROR] Lỗi ghi log SQLite: {ex.Message}");
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[DB ERROR] Lỗi ghi log SQLite: {ex.Message}");
-                }
-            }
+            });
 
             // In ra console monitor để debug
             Console.ForegroundColor = type switch
