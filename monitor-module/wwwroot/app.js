@@ -435,13 +435,13 @@ async function fetchLogs() {
     renderLogs();
 }
 
-// Hiển thị logs dựa trên filter
+// Hiển thị logs dựa trên filter (sắp xếp thời gian xuôi: cũ ở trên, mới nhất ở dưới cùng)
 function renderLogs() {
     const terminal = document.getElementById('log-terminal');
     const filter = document.getElementById('log-filter-select').value;
     
-    // Lưu vị trí scroll của người dùng trước khi update
-    const shouldScroll = Math.abs(terminal.scrollHeight - terminal.clientHeight - terminal.scrollTop) < 20;
+    // Kiểm tra xem người dùng có đang cuộn ở gần cuối hay không (hoặc là lần đầu nạp)
+    const isAtBottom = (terminal.scrollHeight - terminal.clientHeight - terminal.scrollTop) < 80 || !terminal.dataset.scrolled;
 
     terminal.innerHTML = '';
 
@@ -466,9 +466,10 @@ function renderLogs() {
         terminal.appendChild(line);
     });
 
-    // Tự động cuộn xuống dưới cùng nếu người dùng đang ở cuối
-    if (shouldScroll) {
+    // Tự động cuộn xuống dưới cùng để dòng log mới nhất luôn hiển thị trước mắt
+    if (isAtBottom) {
         terminal.scrollTop = terminal.scrollHeight;
+        terminal.dataset.scrolled = "true";
     }
 }
 

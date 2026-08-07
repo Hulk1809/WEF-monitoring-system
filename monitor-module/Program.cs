@@ -275,12 +275,12 @@ namespace MonitorModule
                 });
             });
 
-            // API 2: Lấy danh sách Logs (tối đa 100 dòng gần nhất từ RAM Cache siêu tốc <0.1ms)
+            // API 2: Lấy danh sách Logs (100 dòng mới nhất, sắp xếp theo thời gian xuôi: cũ ở trên, mới nhất ở dưới cùng)
             app.MapGet("/api/logs", (HttpContext context) => 
             {
                 if (!IsAuthorized(context)) return Results.Json(new { Success = false, Message = "Chưa đăng nhập hoặc phiên làm việc hết hạn." }, statusCode: 401);
 
-                return Results.Ok(LogCache.ToArray().OrderByDescending(l => l.Timestamp).Take(100).ToList());
+                return Results.Ok(LogCache.ToArray().OrderBy(l => l.Timestamp).TakeLast(100).ToList());
             });
 
             // API 3: Điều khiển container (Start / Stop / Restart)
