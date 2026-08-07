@@ -768,7 +768,13 @@ namespace MonitorModule
                     while (!cancellationToken.IsCancellationRequested)
                     {
                         var result = await logStream.ReadOutputAsync(buffer, 0, buffer.Length, cancellationToken);
-                        if (result.EOF) break;
+                        if (result.EOF)
+                        {
+                            _appContainerId = string.Empty;
+                            await Task.Delay(1000, cancellationToken);
+                            await ResolveContainerIdsAsync();
+                            break;
+                        }
 
                         if (result.Count > 0)
                         {
@@ -793,7 +799,8 @@ namespace MonitorModule
                 }
                 catch
                 {
-                    await Task.Delay(3000, cancellationToken);
+                    _appContainerId = string.Empty;
+                    await Task.Delay(2000, cancellationToken);
                     await ResolveContainerIdsAsync();
                 }
             }
