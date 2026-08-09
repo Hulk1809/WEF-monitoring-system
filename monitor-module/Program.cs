@@ -25,7 +25,7 @@ namespace MonitorModule
         private const string NginxContainerName = "nginx-proxy";
 
         // Ngưỡng cảnh báo và phòng vệ
-        private const int ScanThresholdCount = 15; // Số request nghi vấn tối đa (15 lần)
+        private const int ScanThresholdCount = 5; // Số request nghi vấn tối đa (5 lần)
         private const int ScanThresholdSeconds = 60; // Trong khoảng thời gian (60 giây)
         private const double CpuThresholdPercent = 85.0; // Ngưỡng CPU cảnh báo (%)
 
