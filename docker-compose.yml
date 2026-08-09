@@ -66,8 +66,8 @@ services:
     networks:
       - secure-net
     environment:
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-6414047560}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-8783186321:AAEpUPOLOGW8UcHmi3n_bqTlnu1FJSSivp4}
       - REDIS_CONNECTION=redis-cache:6379
     restart: always
 

