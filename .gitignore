@@ -24,3 +24,4 @@ postgres_data/
 monitor_data/
 waf_model.zip
 waf_deep_model.onnx
+aws_backup/
