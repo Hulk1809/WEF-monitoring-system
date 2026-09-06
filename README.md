@@ -99,7 +99,6 @@ docker-compose up -d --build
 
 - 🤖 **[Hướng dẫn Vận hành & Lệnh Telegram Bot](./TELEGRAM_BOT_OPERATION_GUIDE.md)**: Chi tiết cơ chế Long Polling, các mẫu cảnh báo đỏ/vàng thời gian thực, bảng tra cứu lệnh Slash Commands (`/status`, `/unblock_all`, `/whitelist`, `/restart_all`) và xử lý sự cố.
 - ☁️ **[Hướng dẫn Triển khai AWS EC2 (ARM64 / Graviton)](./aws_ec2_config.md)**: Cấu hình Host, SSH Key `.pem`, Docker và thiết lập đường hầm SSH Tunnel.
-- 🎬 **[Kịch bản Quay Video Báo cáo & Lệnh Tấn công Demo](./Kich_Ban_Thoai_Video_1_va_2_DoAn_ATTT.docx)**: Kịch bản thuyết minh và các câu lệnh demo thực chiến.
 
 ---
 
