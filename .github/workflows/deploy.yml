@@ -1,0 +1,68 @@
+name: CI/CD Pipeline - Deploy to AWS EC2
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy application via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            echo "=== [1/5] Identifying project directory on EC2 ==="
+            if [ -d "$HOME/DA.ATTT/.git" ]; then
+              APP_DIR="$HOME/DA.ATTT"
+            elif [ -d "$HOME/WEF-monitoring-system/.git" ]; then
+              APP_DIR="$HOME/WEF-monitoring-system"
+            elif [ -d "$HOME/DA.ATTT" ]; then
+              APP_DIR="$HOME/DA.ATTT"
+            else
+              echo "Project directory not found, cloning repository..."
+              git clone https://github.com/Hulk1809/WEF-monitoring-system.git "$HOME/WEF-monitoring-system"
+              APP_DIR="$HOME/WEF-monitoring-system"
+            fi
+
+            echo "Target Directory: $APP_DIR"
+            cd "$APP_DIR"
+
+            echo "=== [2/5] Updating source code from GitHub ==="
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "=== [3/5] Verifying environment & SSL configuration ==="
+            if [ ! -f .env ] && [ -f .env.example ]; then
+              echo "Creating .env from .env.example..."
+              cp .env.example .env
+            fi
+
+            mkdir -p nginx/ssl
+            if [ ! -f nginx/ssl/tls.key ] || [ ! -f nginx/ssl/tls.crt ]; then
+              echo "Generating self-signed SSL certificate for Nginx..."
+              openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                -keyout nginx/ssl/tls.key \
+                -out nginx/ssl/tls.crt \
+                -subj "/CN=localhost" || true
+            fi
+
+            echo "=== [4/5] Deploying Docker containers ==="
+            docker compose down || true
+            docker compose up -d --build
+
+            echo "=== [5/5] Cleaning up dangling images ==="
+            docker image prune -f
+
+            echo "=== Deployment to AWS EC2 Succeeded! ==="
