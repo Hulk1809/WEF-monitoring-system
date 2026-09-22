@@ -20,13 +20,19 @@ jobs:
           SSH_USER: ${{ secrets.EC2_USER }}
           SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
         run: |
-          echo "=== [1/5] Validating Secrets ==="
-          if [ -z "$SSH_HOST" ]; then
-            echo "::error::Secret 'EC2_HOST' is missing or empty!"
-            exit 1
+          echo "=== [1/5] Validating & Sanitizing Secrets ==="
+          
+          # Tự động làm sạch username (xóa bỏ khoảng trắng, dấu nháy, xuống dòng, phần @host nếu lỡ nhập kèm)
+          CLEAN_USER=$(echo "${SSH_USER:-ec2-user}" | tr -d '\r\n\t "' | tr -d "'" | sed -e 's/@.*//')
+          if [ -z "$CLEAN_USER" ]; then
+            CLEAN_USER="ec2-user"
           fi
-          if [ -z "$SSH_USER" ]; then
-            echo "::error::Secret 'EC2_USER' is missing or empty!"
+
+          # Tự động làm sạch host IP (xóa bỏ khoảng trắng, dấu nháy, phần user@ nếu lỡ nhập kèm)
+          CLEAN_HOST=$(echo "${SSH_HOST}" | tr -d '\r\n\t "' | tr -d "'" | sed -e 's/.*@//')
+
+          if [ -z "$CLEAN_HOST" ]; then
+            echo "::error::Secret 'EC2_HOST' is missing or empty!"
             exit 1
           fi
           if [ -z "$SSH_KEY" ]; then
@@ -34,17 +40,18 @@ jobs:
             exit 1
           fi
 
-          echo "Connecting to Host: $SSH_HOST with User: $SSH_USER"
+          echo "Target Host: $CLEAN_HOST"
+          echo "Target User: $CLEAN_USER"
 
           echo "=== [2/5] Configuring SSH Key ==="
           mkdir -p ~/.ssh
-          # Xóa bỏ ký tự xuống dòng CRLF (\r) của Windows và đảm bảo quyền 600
+          # Chuẩn hóa khóa SSH loại bỏ ký tự Windows CRLF
           echo "$SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           sed -i -e '$a\' ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
           echo "=== [3/5] Connecting to EC2 & Executing Deployment ==="
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa "$SSH_USER@$SSH_HOST" 'bash -s' << 'EOF'
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa "$CLEAN_USER@$CLEAN_HOST" 'bash -s' << 'EOF'
             set -e
 
             echo "--> [Step 1] Locating project folder..."
@@ -60,7 +67,7 @@ jobs:
               APP_DIR="$HOME/WEF-monitoring-system"
             fi
 
-            echo "Target Directory: $APP_DIR"
+            echo "Working directory: $APP_DIR"
             cd "$APP_DIR"
 
             echo "--> [Step 2] Updating code from GitHub..."
