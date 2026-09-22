@@ -80,11 +80,14 @@ jobs:
             fi
 
             mkdir -p nginx/ssl
-            if [ ! -f nginx/ssl/tls.key ] || [ ! -f nginx/ssl/tls.crt ]; then
+            CRT_MD5=$(openssl x509 -noout -modulus -in nginx/ssl/tls.crt 2>/dev/null | openssl md5 2>/dev/null || echo "1")
+            KEY_MD5=$(openssl rsa -noout -modulus -in nginx/ssl/tls.key 2>/dev/null | openssl md5 2>/dev/null || echo "2")
+            if [ "$CRT_MD5" != "$KEY_MD5" ]; then
+              echo "Synchronizing SSL certificate and private key..."
               openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
                 -keyout nginx/ssl/tls.key \
                 -out nginx/ssl/tls.crt \
-                -subj "/CN=localhost" || true
+                -subj "/CN=3.1.210.184" || true
             fi
 
             echo "--> [Step 4] Starting Docker containers..."
